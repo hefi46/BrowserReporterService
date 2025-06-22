@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>icon_grey.ico</ApplicationIcon>
+    <PublishSingleFile>false</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    
+    <!-- Version Information -->
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Company>[YOUR_ORGANIZATION]</Company>
+    <Product>Browser Reporter Service</Product>
+    <Description>Windows system tray application for collecting and reporting browser history</Description>
+    <Copyright>Copyright © 2024 [YOUR_ORGANIZATION]</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="icon_grey.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="icon_green.ico" />
+    <EmbeddedResource Include="icon_grey.ico">
+      <LogicalName>BrowserReporterService.icon_grey.ico</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="icon_red.ico" />
+    <EmbeddedResource Include="icon_yellow.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.4" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Serilog" Version="3.1.1" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
+    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.8" />
+    <PackageReference Include="System.DirectoryServices.AccountManagement" Version="9.0.6" />
+    <PackageReference Include="System.DirectoryServices.Protocols" Version="9.0.6" />
+    <PackageReference Include="System.Security.Principal.Windows" Version="5.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.4" />
+  </ItemGroup>
+
+</Project> 

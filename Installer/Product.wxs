@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="Browser Reporter Service" 
+           Manufacturer="[YOUR_ORGANIZATION]" 
+           Version="1.0.0" 
+           UpgradeCode="ea205a21-2305-4ee7-9169-8086a9928540" 
+           Scope="perMachine">
+
+    <!-- Ensure upgrades replace previous versions -->
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+
+    <!-- Default cab compression -->
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Define our installation directory inside the Program Files folder -->
+    <StandardDirectory Id="ProgramFilesFolder">
+      <Directory Id="INSTALLDIR" Name="BrowserReporterService" />
+    </StandardDirectory>
+
+    <!-- Define the all-users startup folder manually -->
+    <Directory Id="ProgramDataFolder">
+      <Directory Id="AllUsersStartMenu" Name="Microsoft">
+        <Directory Id="AllUsersStartMenuPrograms" Name="Windows">
+          <Directory Id="AllUsersStartup" Name="Start Menu">
+            <Directory Id="AllUsersStartupFolder" Name="Programs">
+              <Directory Id="AllUsersStartupPrograms" Name="Startup" />
+            </Directory>
+          </Directory>
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <Component Id="StartupShortcut" Guid="b6e2e2e2-1c2a-4b7a-9e2a-7e2e2e2e2e2e" Directory="AllUsersStartupPrograms">
+      <Shortcut Id="StartupShortcut" 
+                Name="Browser Reporter Service" 
+                Description="Browser Reporter Service - Starts automatically for all users"
+                Target="[INSTALLDIR]BrowserReporterService.exe"
+                WorkingDirectory="INSTALLDIR" />
+      <RemoveFolder Id="AllUsersStartupPrograms" On="uninstall" />
+    </Component>
+
+    <!-- Pull in the harvested binaries and define the main feature -->
+    <Feature Id="MainFeature" Title="Browser Reporter Service" Level="1">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="StartupShortcut" />
+    </Feature>
+
+  </Package>
+</Wix> 

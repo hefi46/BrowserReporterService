@@ -1,0 +1,25 @@
+<Project Sdk="WixToolset.Sdk/6.0.0">
+  <PropertyGroup>
+    <!-- Name of the resulting MSI file -->
+    <OutputName>BrowserReporterService</OutputName>
+    <!-- Point to the self-contained, folder-based publish output -->
+    <PublishDir Condition="'$(PublishDir)'==''">$(MSBuildThisFileDirectory)..\publish_scd_folder\</PublishDir>
+  </PropertyGroup>
+
+  <!-- Harvest everything that was published (FDD) into the MSI -->
+  <ItemGroup>
+    <HarvestDirectory Include="$(PublishDir)">
+      <ComponentGroupName>AppFiles</ComponentGroupName>
+      <!-- INSTALLDIR is defined in Product.wxs -->
+      <DirectoryRefId>INSTALLDIR</DirectoryRefId>
+      <SuppressRootDirectory>true</SuppressRootDirectory>
+    </HarvestDirectory>
+    <!-- Bind paths so WiX can find the physical files -->
+    <BindPath Include="$(PublishDir)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Heat is required for HarvestDirectory -->
+    <PackageReference Include="WixToolset.Heat" Version="6.0.0" />
+  </ItemGroup>
+</Project> 
