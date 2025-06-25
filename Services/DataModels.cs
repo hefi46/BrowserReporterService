@@ -4,22 +4,20 @@ namespace BrowserReporterService.Services
 {
     public class BrowserVisit
     {
-        [JsonProperty("url")]
+        [JsonProperty("Url")]
         public string Url { get; set; } = string.Empty;
         
-        [JsonProperty("title")]
+        [JsonProperty("Title")]
         public string Title { get; set; } = string.Empty;
         
-        [JsonProperty("timestamp")]
+        [JsonProperty("VisitTime")]
         public long VisitTime { get; set; } // Unix Milliseconds
         
-        [JsonProperty("duration_sec")]
-        public int Duration { get; set; }
-        
-        [JsonProperty("browser")]
-        public string Browser { get; set; } = string.Empty;
-        
+        [JsonProperty("ComputerName")]
         public string ComputerName { get; set; } = string.Empty;
+        
+        public int Duration { get; set; }
+        public string Browser { get; set; } = string.Empty;
         public int VisitCount { get; set; }
         public string ProfileName { get; set; } = string.Empty;
         public string BrowserType { get; set; } = string.Empty;
@@ -33,6 +31,24 @@ namespace BrowserReporterService.Services
     {
         [JsonProperty("Username")]
         public string Username { get; set; } = string.Empty;
+        [JsonProperty("ComputerName")]
+        public string ComputerName { get; set; } = string.Empty;
+        [JsonProperty("Domain")]
+        public string Domain { get; set; } = string.Empty;
+        [JsonProperty("FullName")]
+        public string FullName { get; set; } = string.Empty;
+        [JsonProperty("DisplayName")]
+        public string DisplayName { get; set; } = string.Empty;
+        [JsonProperty("FirstName")]
+        public string FirstName { get; set; } = string.Empty;
+        [JsonProperty("LastName")]
+        public string LastName { get; set; } = string.Empty;
+        [JsonProperty("Department")]
+        public string Department { get; set; } = string.Empty;
+        [JsonProperty("Email")]
+        public string Email { get; set; } = string.Empty;
+        [JsonProperty("Groups")]
+        public string[] Groups { get; set; } = System.Array.Empty<string>();
     }
 
     public class ReportPayload
@@ -45,27 +61,5 @@ namespace BrowserReporterService.Services
 
         [JsonProperty("UserInfo")]
         public UserInfo UserInfo { get; set; } = new();
-    }
-
-    public class HeartbeatPayload
-    {
-        [JsonProperty("username")] public string Username { get; set; } = string.Empty;
-        [JsonProperty("ip")] public string IP { get; set; } = string.Empty;
-        [JsonProperty("uptime_sec")] public long UptimeSeconds { get; set; }
-    }
-
-    public class HeartbeatResponse
-    {
-        [JsonProperty("requestScreenshot")] public bool RequestScreenshot { get; set; }
-    }
-
-    // New payload structure that matches the server's /api/ingest/browsing endpoint
-    public class BrowsingIngestPayload
-    {
-        [JsonProperty("username")]
-        public string Username { get; set; } = string.Empty;
-
-        [JsonProperty("visits")]
-        public List<BrowserVisit> Visits { get; set; } = new();
     }
 } 

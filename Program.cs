@@ -134,12 +134,12 @@ namespace BrowserReporterService
         private readonly Serilog.ILogger _logger;
         private readonly CommandLineArgs _args;
         private readonly ConfigService _configService;
+        private readonly UserInfoService _userInfoService;
         private AppConfig? _appConfig;
         private System.Threading.Timer? _syncTimer;
         private readonly Random _jitter = new();
         private bool _isSyncing = false;
         private object _syncLock = new object();
-        private WebSocketRealtimeService? _realtimeService;
         private bool _consoleAllocated = false;
 
         public TrayApplicationContext(Serilog.ILogger logger, CommandLineArgs args)
@@ -147,15 +147,15 @@ namespace BrowserReporterService
             _logger = logger;
             _args = args;
             _configService = new ConfigService(_logger);
+            _userInfoService = new UserInfoService(_logger);
 
             contextMenu = new ContextMenuStrip();
             contextMenu.Items.Add("Status: Initializing...", null, (s, e) => { });
             contextMenu.Items.Add("-");
             contextMenu.Items.Add("Force Data Sync Now", null, OnForceSync);
             contextMenu.Items.Add("Show Debug Console", null, OnViewLogs);
-            contextMenu.Items.Add("Capture Screenshot Now", null, OnCaptureScreenshot);
             contextMenu.Items.Add("-");
-            contextMenu.Items.Add("Exit", null, OnExit);
+            contextMenu.Items.Add("Exit (Password Protected)", null, OnExit);
             contextMenu.Items[0].Enabled = false;
 
             trayIcon = new NotifyIcon()
@@ -195,20 +195,11 @@ namespace BrowserReporterService
                 _logger.Information("Overriding server URL from CLI argument: {ServerUrl}", _args.ServerUrl);
                 _appConfig.ServerUrl = _args.ServerUrl;
             }
-            if (!string.IsNullOrWhiteSpace(_args.ApiKeyOverride))
-            {
-                _logger.Information("Overriding API key from CLI argument.");
-                _appConfig.ApiKey = _args.ApiKeyOverride;
-            }
 
             // If config loaded, update logging with new settings
             var newLogger = LoggingService.CreateLogger(_args); // Re-create logger with potential new settings from config
             Log.Logger = newLogger;
             _logger.Information("Configuration loaded successfully. Logger re-initialized with remote settings.");
-
-            // Start realtime listener for instant commands
-            _realtimeService = new WebSocketRealtimeService(_logger, _appConfig);
-            _ = _realtimeService.StartAsync();
 
             if (_args.IsOnce)
             {
@@ -234,8 +225,8 @@ namespace BrowserReporterService
             else
             {
                 _logger.Warning("Failed to load configuration on retry. Will try again later.");
-                var retryInterval = _appConfig?.RetryIntervalSeconds ?? 300;
-                 var retryTimer = new System.Threading.Timer(
+                var retryInterval = 300;
+                var retryTimer = new System.Threading.Timer(
                     async _ => await RetryConfigLoad(),
                     null,
                     TimeSpan.FromSeconds(retryInterval), 
@@ -317,22 +308,6 @@ namespace BrowserReporterService
                 var apiClient = new ApiClient(_logger, _appConfig);
                 var overallSuccess = await SendVisitsInBatches(apiClient, newVisits, cache);
 
-                // 5. Heartbeat and optional screenshot request handling
-                var hbPayload = new HeartbeatPayload
-                {
-                    Username = Environment.UserName,
-                    IP = GetLocalIPAddress(),
-                    UptimeSeconds = Environment.TickCount64 / 1000
-                };
-                var screenshotRequested = await apiClient.SendHeartbeatAsync(hbPayload);
-                if (screenshotRequested == true)
-                {
-                    _logger.Information("Server requested a screenshot via heartbeat response.");
-                    var screenshotService = new ScreenshotService(_logger);
-                    var imgBytes = screenshotService.CaptureScreenshotPng();
-                    await apiClient.UploadScreenshotAsync(imgBytes, Environment.UserName);
-                }
-
                 // 5. Update icon based on overall success
                 if (overallSuccess)
                 {
@@ -376,7 +351,7 @@ namespace BrowserReporterService
                 {
                     Username = Environment.UserName,
                     Visits = batch,
-                    UserInfo = new UserInfo { Username = Environment.UserName }
+                    UserInfo = _userInfoService.GetCurrentUserInfo()
                 };
 
                 bool success = await apiClient.SendReportAsync(payload);
@@ -455,47 +430,90 @@ namespace BrowserReporterService
             }
         }
 
-        private void OnCaptureScreenshot(object? sender, EventArgs e)
-        {
-            _logger.Information("'Capture Screenshot Now' clicked.");
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    if (_appConfig == null)
-                    {
-                        _logger.Warning("Cannot capture screenshot: configuration not loaded yet.");
-                        return;
-                    }
-                    var screenshotService = new ScreenshotService(_logger);
-                    var imgBytes = screenshotService.CaptureScreenshotPng();
-                    var apiClient = new ApiClient(_logger, _appConfig);
-                    var success = await apiClient.UploadScreenshotAsync(imgBytes, Environment.UserName);
-                    if (success)
-                    {
-                        _logger.Information("Screenshot capture and upload completed successfully.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "Failed to capture or upload screenshot.");
-                }
-            });
-        }
-
         async void OnExit(object? sender, EventArgs e)
         {
             _logger.Information("Exit requested from context menu.");
-            trayIcon.Visible = false;
-            if (_realtimeService != null)
+            
+            // Show password dialog
+            var passwordForm = new Form
             {
-                await _realtimeService.DisposeAsync();
-            }
-            if (_consoleAllocated)
+                Text = "Browser Reporter - Exit Confirmation",
+                Size = new Size(350, 150),
+                StartPosition = FormStartPosition.CenterScreen,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false,
+                ShowInTaskbar = false,
+                TopMost = true
+            };
+
+            var label = new Label
             {
-                FreeConsole();
+                Text = "Enter admin password to exit:",
+                Location = new Point(20, 20),
+                Size = new Size(300, 20)
+            };
+
+            var passwordBox = new TextBox
+            {
+                Location = new Point(20, 50),
+                Size = new Size(200, 20),
+                PasswordChar = '*',
+                UseSystemPasswordChar = true
+            };
+
+            var okButton = new Button
+            {
+                Text = "OK",
+                Location = new Point(230, 48),
+                Size = new Size(60, 25),
+                DialogResult = DialogResult.OK
+            };
+
+            var cancelButton = new Button
+            {
+                Text = "Cancel",
+                Location = new Point(230, 78),
+                Size = new Size(60, 25),
+                DialogResult = DialogResult.Cancel
+            };
+
+            passwordForm.Controls.AddRange(new Control[] { label, passwordBox, okButton, cancelButton });
+            passwordForm.AcceptButton = okButton;
+            passwordForm.CancelButton = cancelButton;
+
+            // Focus on password box
+            passwordForm.Load += (s, args) => passwordBox.Focus();
+
+            var result = passwordForm.ShowDialog();
+            
+            if (result == DialogResult.OK)
+            {
+                var enteredPassword = passwordBox.Text;
+                
+                // Check if password is correct (using configured password)
+                var expectedPassword = _appConfig?.ExitPassword ?? "BRAdmin2025";
+                if (enteredPassword == expectedPassword)
+                {
+                    _logger.Information("Exit password accepted. Shutting down application.");
+                    trayIcon.Visible = false;
+                    if (_consoleAllocated)
+                    {
+                        FreeConsole();
+                    }
+                    Application.Exit();
+                }
+                else
+                {
+                    _logger.Warning("Incorrect exit password entered by user: {User}", Environment.UserName);
+                    MessageBox.Show("Incorrect password. Application will continue running.", 
+                        "Access Denied", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
-            Application.Exit();
+            else
+            {
+                _logger.Information("Exit cancelled by user.");
+            }
         }
 
         private enum IconColor { Red, Yellow, Green, Grey }

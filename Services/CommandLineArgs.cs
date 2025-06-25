@@ -9,7 +9,6 @@ namespace BrowserReporterService.Services
         public bool EncryptConfig { get; private set; }
         public string? ConfigPath { get; private set; }
         public string? ServerUrl { get; private set; }
-        public string? ApiKeyOverride { get; private set; }
 
         public bool ShouldRunApplication => !Install && !Uninstall && !EncryptConfig;
 
@@ -30,10 +29,6 @@ namespace BrowserReporterService.Services
                 else if (args[i] == "--server")
                 {
                     ServerUrl = args[i + 1];
-                }
-                else if (args[i] == "--apikey")
-                {
-                    ApiKeyOverride = args[i + 1];
                 }
             }
 

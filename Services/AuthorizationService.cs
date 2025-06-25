@@ -1,147 +1,16 @@
-using System.DirectoryServices.Protocols;
-using System.Net;
 using System.Security.Principal;
-using System.DirectoryServices.AccountManagement;
 
 namespace BrowserReporterService.Services
 {
     public class AuthorizationService
     {
         private readonly Serilog.ILogger _logger;
+        private readonly UserInfoService _userInfoService;
 
         public AuthorizationService(Serilog.ILogger logger)
         {
             _logger = logger;
-        }
-
-        public bool IsCurrentUserAuthorized(AppConfig config)
-        {
-            if (!config.EnableGroupFiltering || config.SecurityGroups.Length == 0)
-            {
-                _logger.Information("Group filtering is disabled or no security groups are defined. Authorization check is skipped (authorized by default).");
-                return true;
-            }
-
-            _logger.Information("Performing authorization check for user: {User}", Environment.UserName);
-
-            if (config.PreferLocalGroupLookup)
-            {
-                _logger.Information("Attempting authorization using local security token lookup.");
-                try
-                {
-                    if (IsUserInGroupsLocally(config.SecurityGroups))
-                    {
-                        _logger.Information("User is authorized based on local group membership.");
-                        return true;
-                    }
-                    _logger.Warning("User not found in required groups via local lookup. Falling back to LDAP.");
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "Local group lookup failed. Falling back to LDAP.");
-                }
-            }
-
-            _logger.Information("Attempting authorization using LDAP lookup.");
-            try
-            {
-                if (IsUserInGroupsViaLdap(Environment.UserName, config.SecurityGroups, config))
-                {
-                    _logger.Information("User is authorized based on LDAP group membership.");
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "LDAP group lookup failed.");
-            }
-
-            _logger.Warning("Authorization check failed. User '{User}' is not a member of any required security groups.", Environment.UserName);
-            return false;
-        }
-
-        private bool IsUserInGroupsLocally(string[] groupSidsOrNames)
-        {
-            using (var identity = WindowsIdentity.GetCurrent())
-            {
-                if (identity.Groups == null)
-                {
-                    _logger.Warning("Could not retrieve user's security groups from Windows identity.");
-                    return false;
-                }
-
-                var userGroups = identity.Groups.Select(g => {
-                    try 
-                    {
-                        return g.Translate(typeof(NTAccount)).Value;
-                    }
-                    catch (IdentityNotMappedException)
-                    {
-                        return g.Value; // Fallback to SID if name can't be resolved
-                    }
-                }).ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-                foreach (var requiredGroup in groupSidsOrNames)
-                {
-                    if (userGroups.Any(ug => ug.Equals(requiredGroup, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        _logger.Information("User is a member of '{Group}' (local check).", requiredGroup);
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-        private bool IsUserInGroupsViaLdap(string username, string[] groupDns, AppConfig config)
-        {
-            try
-            {
-                using (var connection = new LdapConnection(config.Ldap.Server))
-                {
-                    connection.AuthType = AuthType.Negotiate;
-                    connection.Bind(); // Bind as current user
-
-                    var userSearchRequest = new SearchRequest(
-                        config.Ldap.UserSearchBase,
-                        $"(&(objectClass=user)(sAMAccountName={username}))",
-                        SearchScope.Subtree,
-                        "memberOf"
-                    );
-
-                    var userResponse = (SearchResponse)connection.SendRequest(userSearchRequest);
-                    if (userResponse.Entries.Count == 0)
-                    {
-                        _logger.Warning("LDAP search found no user with sAMAccountName: {Username}", username);
-                        return false;
-                    }
-
-                    var userEntry = userResponse.Entries[0];
-                    var memberOf = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    if (userEntry.Attributes.Contains("memberOf"))
-                    {
-                        foreach (string group in userEntry.Attributes["memberOf"].GetValues(typeof(string)))
-                        {
-                            memberOf.Add(group);
-                        }
-                    }
-
-                    foreach (var requiredGroupDn in groupDns)
-                    {
-                        if (memberOf.Contains(requiredGroupDn))
-                        {
-                            _logger.Information("User is a member of '{Group}' (LDAP check).", requiredGroupDn);
-                            return true;
-                        }
-                    }
-                }
-            }
-            catch (LdapException ex)
-            {
-                _logger.Error(ex, "An LDAP exception occurred during authorization check.");
-                throw;
-            }
-            return false;
+            _userInfoService = new UserInfoService(logger);
         }
 
         /// <summary>
@@ -166,7 +35,7 @@ namespace BrowserReporterService.Services
                 // Check if user is in the monitored group
                 if (!string.IsNullOrEmpty(config.MonitoredUsersGroup))
                 {
-                    if (IsUserInGroup(currentUser, config.MonitoredUsersGroup))
+                    if (_userInfoService.IsUserInGroup(config.MonitoredUsersGroup))
                     {
                         _logger.Information("User {Username} is member of monitored group: {Group}", currentUser, config.MonitoredUsersGroup);
                         return true;
@@ -234,55 +103,12 @@ namespace BrowserReporterService.Services
         /// <returns>True if the browser should be monitored</returns>
         public bool ShouldMonitorBrowser(AppConfig config, string browserName)
         {
-            if (config.Browsers == null || config.Browsers.Length == 0)
+            if (config.Browsers == null || config.Browsers.Count == 0)
             {
                 return true; // Default to monitoring all browsers if not specified
             }
 
             return config.Browsers.Contains(browserName, StringComparer.OrdinalIgnoreCase);
-        }
-
-        private bool IsUserInGroup(string username, string groupName)
-        {
-            try
-            {
-                using var context = new PrincipalContext(ContextType.Domain);
-                using var user = UserPrincipal.FindByIdentity(context, username);
-                
-                if (user == null)
-                {
-                    _logger.Warning("User {Username} not found in domain", username);
-                    return false;
-                }
-
-                using var group = GroupPrincipal.FindByIdentity(context, groupName);
-                if (group == null)
-                {
-                    _logger.Warning("Group {GroupName} not found in domain", groupName);
-                    return false;
-                }
-
-                return user.IsMemberOf(group);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Error checking group membership for user {Username} in group {GroupName}", username, groupName);
-                
-                // Fallback: try local group check
-                try
-                {
-                    using var context = new PrincipalContext(ContextType.Machine);
-                    using var user = UserPrincipal.FindByIdentity(context, username);
-                    using var group = GroupPrincipal.FindByIdentity(context, groupName);
-                    
-                    return user?.IsMemberOf(group) == true;
-                }
-                catch (Exception localEx)
-                {
-                    _logger.Error(localEx, "Error checking local group membership");
-                    return false;
-                }
-            }
         }
     }
 } 

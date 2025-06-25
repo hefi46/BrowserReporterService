@@ -72,18 +72,18 @@ The application downloads an AES-encrypted configuration file from the server. C
 ```json
 {
   "server_url": "https://your-server.com",
-  "api_key": "your-api-key",
   "sync_interval_minutes": 5,
-  "retry_interval_seconds": 300,
-  "max_history_age_hours": 720,
-  "ldap": {
-    "server": "ldap://your-domain.com",
-    "base_dn": "DC=yourdomain,DC=com"
+  "max_history_age_hours": 24,
+  "monitored_users_group": "",
+  "monitored_users": [],
+  "monitored_hours": {
+    "start": "00:00",
+    "end": "23:59"
   },
-  "enable_group_filtering": true,
-  "security_groups": ["Group1", "Group2"],
+  "browsers": ["chrome", "edge"],
   "log_max_mb": 5,
-  "log_roll_count": 3
+  "log_roll_count": 3,
+  "exit_password": "BRAdmin2025"
 }
 ```
 
@@ -148,7 +148,6 @@ Logs are stored in `%LOCALAPPDATA%\BrowserReporter\logs.txt` with:
 
 - **AES-256-CBC**: Configuration encryption
 - **LDAP Authentication**: User authorization via AD groups
-- **API Key Authentication**: Server communication security
 - **Local Cache**: SQLite database for deduplication
 - **No Admin Rights**: Runs with user-level permissions
 
@@ -158,7 +157,7 @@ Logs are stored in `%LOCALAPPDATA%\BrowserReporter\logs.txt` with:
 
 1. **App doesn't start**: Check if .NET 8 runtime is installed
 2. **No data reported**: Verify user is in authorized AD groups
-3. **Configuration errors**: Check server URL and API key
+3. **Configuration errors**: Check server URL
 4. **SQLite errors**: Ensure write permissions to app data folder
 
 ### Debug Mode

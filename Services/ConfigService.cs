@@ -36,13 +36,7 @@ namespace BrowserReporterService.Services
                 var secureConfigUrl = $"{bootstrapConfig.ServerUrl.TrimEnd('/')}/secureconfig.json";
                 _logger.Information("Downloading secure configuration from: {Url}", secureConfigUrl);
                 
-                // Add API key header if available
                 var request = new HttpRequestMessage(HttpMethod.Get, secureConfigUrl);
-                if (!string.IsNullOrEmpty(bootstrapConfig.ApiKey))
-                {
-                    request.Headers.Add("X-API-Key", bootstrapConfig.ApiKey);
-                }
-                
                 var response = await _httpClient.SendAsync(request);
                 response.EnsureSuccessStatusCode();
                 var secureJson = await response.Content.ReadAsStringAsync();
@@ -56,7 +50,7 @@ namespace BrowserReporterService.Services
                         _logger.Information("Configuration successfully decrypted and verified.");
                         return config;
                     }
-                    _logger.Error("Configuration validation failed. Essential fields like 'server_url' or 'api_key' may be missing or empty.");
+                    _logger.Error("Configuration validation failed. Essential fields like 'server_url' may be missing or empty.");
                     return null;
                 }
                 _logger.Warning("Failed to deserialize decrypted configuration.");
@@ -77,10 +71,7 @@ namespace BrowserReporterService.Services
                 return false;
             }
 
-            // API key is optional - empty string is valid
-            _logger.Information("Configuration validation passed. Server URL: {ServerUrl}, API Key: {HasApiKey}", 
-                config.ServerUrl, string.IsNullOrEmpty(config.ApiKey) ? "Not set" : "Set");
-
+            _logger.Information("Configuration validation passed. Server URL: {ServerUrl}", config.ServerUrl);
             return true;
         }
 
@@ -130,8 +121,7 @@ namespace BrowserReporterService.Services
                 _logger.Information("No bootstrap config found. Using hardcoded DNS name 'browserreporter'.");
                 return new AppConfig 
                 { 
-                    ServerUrl = "http://browserreporter:8080",
-                    ApiKey = "" // Will work if server has no API key requirement
+                    ServerUrl = "http://browserreporter:8000"
                 };
             }
             catch (Exception ex)

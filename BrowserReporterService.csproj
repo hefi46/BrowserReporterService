@@ -45,7 +45,6 @@
     <PackageReference Include="System.DirectoryServices.AccountManagement" Version="9.0.6" />
     <PackageReference Include="System.DirectoryServices.Protocols" Version="9.0.6" />
     <PackageReference Include="System.Security.Principal.Windows" Version="5.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.4" />
   </ItemGroup>
 
 </Project> 
