@@ -50,21 +50,4 @@
     <PackageReference Include="System.Security.Principal.Windows" Version="5.0.0" />
   </ItemGroup>
 
-  <!-- Exclude non-English satellite assemblies from publish output -->
-  <ItemGroup>
-    <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="$([System.String]::Copy('%(ResolvedFileToPublish.DestinationSubDirectory)').StartsWith('cs\')) Or
-                                                                         $([System.String]::Copy('%(ResolvedFileToPublish.DestinationSubDirectory)').StartsWith('de\')) Or
-                                                                         $([System.String]::Copy('%(ResolvedFileToPublish.DestinationSubDirectory)').StartsWith('es\')) Or
-                                                                         $([System.String]::Copy('%(ResolvedFileToPublish.DestinationSubDirectory)').StartsWith('fr\')) Or
-                                                                         $([System.String]::Copy('%(ResolvedFileToPublish.DestinationSubDirectory)').StartsWith('it\')) Or
-                                                                         $([System.String]::Copy('%(ResolvedFileToPublish.DestinationSubDirectory)').StartsWith('ja\')) Or
-                                                                         $([System.String]::Copy('%(ResolvedFileToPublish.DestinationSubDirectory)').StartsWith('ko\')) Or
-                                                                         $([System.String]::Copy('%(ResolvedFileToPublish.DestinationSubDirectory)').StartsWith('pl\')) Or
-                                                                         $([System.String]::Copy('%(ResolvedFileToPublish.DestinationSubDirectory)').StartsWith('pt-BR\')) Or
-                                                                         $([System.String]::Copy('%(ResolvedFileToPublish.DestinationSubDirectory)').StartsWith('ru\')) Or
-                                                                         $([System.String]::Copy('%(ResolvedFileToPublish.DestinationSubDirectory)').StartsWith('tr\')) Or
-                                                                         $([System.String]::Copy('%(ResolvedFileToPublish.DestinationSubDirectory)').StartsWith('zh-Hans\')) Or
-                                                                         $([System.String]::Copy('%(ResolvedFileToPublish.DestinationSubDirectory)').StartsWith('zh-Hant\'))" />
-  </ItemGroup>
-
 </Project> 

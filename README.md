@@ -1,13 +1,13 @@
 # Browser Reporter Service
 
-A Windows system tray application that silently collects browsing history from Chrome and Edge browsers and reports it to a central server based on dynamic configuration. Designed for enterprise deployment with automatic startup for all users.
+A Windows system tray application that silently collects browsing history from Chrome and Edge browsers and reports it to a central server based on dynamic configuration. Designed for enterprise deployment via Group Policy.
 
 ## Features
 
-- **Silent Operation**: Runs in system tray with minimal user interaction
+- **Silent Operation**: Runs in system tray or headless mode with `--no-tray`
 - **Dynamic Configuration**: Downloads encrypted configuration from server
 - **Browser Support**: Chrome and Edge history collection
-- **Enterprise Ready**: MSI installer with all-users startup
+- **Enterprise Ready**: MSI installer + Group Policy deployment
 - **Deduplication**: Prevents duplicate reporting with SQLite cache
 - **LDAP Integration**: User authorization via Active Directory groups
 - **Rolling Logs**: Configurable log rotation and size limits
@@ -16,9 +16,9 @@ A Windows system tray application that silently collects browsing history from C
 ## System Requirements
 
 - **OS**: Windows 10/11 or Windows Server 2019/2022
-- **Framework**: .NET 8 Runtime (included in self-contained deployment)
+- **Framework**: None required (self-contained deployment includes .NET 8 runtime)
 - **Architecture**: x64
-- **Permissions**: User-level access for browser history, admin for installation
+- **Permissions**: User-level access for browser history, admin for MSI installation
 
 ## Development Environment
 
@@ -44,26 +44,44 @@ The MSI installer will be created at `Installer/bin/Release/BrowserReporterServi
 
 - **Application**: Self-contained folder with all dependencies
 - **Installer**: MSI package for enterprise deployment
-- **Deployment**: Installs to `C:\Program Files\BrowserReporterService\`
-- **Startup**: Creates shortcut in all-users startup folder
+- **Install Location**: `C:\Program Files\BrowserReporterService\`
+- **Helper Scripts**: Includes `BrowserReporterService_notray.bat` for GPO deployment
 
 ## Deployment
 
-### Enterprise Deployment (Recommended)
+### Group Policy Deployment (Recommended)
 
-1. **MSI Installation**: Deploy via Configuration Manager, Group Policy, or manual installation
+The recommended enterprise deployment uses **Group Policy** with two components:
+
+1. **MSI Installation** (Computer Configuration GPO)
+   - Deploy via Group Policy Software Installation
+   - Installs to `C:\Program Files\BrowserReporterService\`
+   - Does NOT create automatic startup shortcuts
+
    ```cmd
-   msiexec /i BrowserReporterService.msi ALLUSERS=1
+   # Manual installation alternative
+   msiexec /i BrowserReporterService.msi /quiet
    ```
 
-2. **Automatic Startup**: The app automatically starts for all users via the all-users startup folder
-3. **Configuration**: App downloads encrypted configuration from server on first run
+2. **Logon Script** (User Configuration GPO)
+   - Launch the application at user login using a PowerShell or batch script
+   - Example script path: `C:\Program Files\BrowserReporterService\BrowserReporterService_notray.bat`
+   - Allows custom command-line flags (e.g., `--no-tray` for headless mode)
+   - Enables different configurations per user group
 
-### Manual Installation
+**See `DEPLOYMENT.md` for complete step-by-step Group Policy configuration instructions.**
 
-1. Extract the self-contained folder to `C:\Program Files\BrowserReporterService\`
-2. Create shortcut in `C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\`
-3. Run `BrowserReporterService.exe` to start the application
+### Quick Start Example
+
+```powershell
+# PowerShell logon script for headless deployment
+Start-Process "C:\Program Files\BrowserReporterService\BrowserReporterService.exe" -ArgumentList "--no-tray" -WindowStyle Hidden
+```
+
+Or use the included batch file:
+```cmd
+"C:\Program Files\BrowserReporterService\BrowserReporterService_notray.bat"
+```
 
 ## Configuration
 
@@ -101,6 +119,7 @@ This outputs an encrypted envelope that can be deployed to the server.
 
 | Option | Description |
 |--------|-------------|
+| `--no-tray` | Run without system tray icon (recommended for GPO deployment) |
 | `--debug` | Enable console output for debugging |
 | `--once` | Perform single sync cycle and exit |
 | `--config <path>` | Use local plaintext config file |
@@ -109,6 +128,9 @@ This outputs an encrypted envelope that can be deployed to the server.
 ### Examples
 
 ```bash
+# Headless mode without tray icon (for GPO deployment)
+BrowserReporterService.exe --no-tray
+
 # Debug mode with console output
 BrowserReporterService.exe --debug
 
@@ -118,13 +140,16 @@ BrowserReporterService.exe --once
 # Use local config file
 BrowserReporterService.exe --config "C:\temp\config.json"
 
+# Combine flags for headless deployment with custom config
+BrowserReporterService.exe --no-tray --config "\\server\share\config.json"
+
 # Encrypt configuration
 BrowserReporterService.exe --encryptconfig --config "plaintext.json"
 ```
 
 ## System Tray Interface
 
-The application runs in the system tray with status indicators:
+The application runs in the system tray with status indicators (unless running with `--no-tray` flag):
 
 - **Green Icon**: Connected and reporting successfully
 - **Yellow Icon**: Connected but user not authorized
@@ -155,10 +180,10 @@ Logs are stored in `%LOCALAPPDATA%\BrowserReporter\logs.txt` with:
 
 ### Common Issues
 
-1. **App doesn't start**: Check if .NET 8 runtime is installed
-2. **No data reported**: Verify user is in authorized AD groups
-3. **Configuration errors**: Check server URL
-4. **SQLite errors**: Ensure write permissions to app data folder
+1. **App doesn't start**: Check Windows Event Viewer for application errors, verify installation completed successfully
+2. **No data reported**: Verify user is in authorized AD groups and within monitoring hours
+3. **Configuration errors**: Check server URL is accessible and encrypted config is valid
+4. **SQLite errors**: Ensure write permissions to `%LOCALAPPDATA%\BrowserReporter\`
 
 ### Debug Mode
 
@@ -183,11 +208,14 @@ Logs contain detailed information about:
 - Initial release
 - Chrome and Edge browser support
 - Enterprise MSI deployment
-- All-users startup configuration
-- LDAP integration
+- Group Policy deployment support
+- `--no-tray` headless mode for GPO logon scripts
+- Included helper script: `BrowserReporterService_notray.bat`
+- LDAP integration with AD groups
 - AES configuration encryption
 - SQLite deduplication cache
 - Rolling log system
+- Self-contained deployment (no runtime dependencies)
 
 ## License
 
