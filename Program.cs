@@ -162,11 +162,18 @@ namespace BrowserReporterService
             {
                 Icon = new Icon(LoadEmbeddedResource("icon_grey.ico")),
                 ContextMenuStrip = contextMenu,
-                Visible = true,
+                Visible = !_args.NoTray,
                 Text = "Browser Reporter"
             };
 
-            _logger.Information("Tray icon and context menu initialized.");
+            if (_args.NoTray)
+            {
+                _logger.Information("Running in no-tray mode. System tray icon will not be shown.");
+            }
+            else
+            {
+                _logger.Information("Tray icon and context menu initialized.");
+            }
             _ = StartMainLoopAsync();
         }
 

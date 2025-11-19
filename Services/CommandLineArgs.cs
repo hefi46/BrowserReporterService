@@ -7,6 +7,7 @@ namespace BrowserReporterService.Services
         public bool Install { get; private set; }
         public bool Uninstall { get; private set; }
         public bool EncryptConfig { get; private set; }
+        public bool NoTray { get; private set; }
         public string? ConfigPath { get; private set; }
         public string? ServerUrl { get; private set; }
 
@@ -19,6 +20,7 @@ namespace BrowserReporterService.Services
             Install = args.Contains("--install");
             Uninstall = args.Contains("--uninstall");
             EncryptConfig = args.Contains("--encryptconfig");
+            NoTray = args.Contains("--no-tray");
 
             for (int i = 0; i < args.Length - 1; i++)
             {
