@@ -3,7 +3,7 @@
     <!-- Name of the resulting MSI file -->
     <OutputName>BrowserReporterService</OutputName>
     <!-- Point to the self-contained, folder-based publish output -->
-    <PublishDir Condition="'$(PublishDir)'==''">$(MSBuildThisFileDirectory)..\..\publish_scd_folder\</PublishDir>
+    <PublishDir Condition="'$(PublishDir)'==''">$(MSBuildThisFileDirectory)..\bin\Release\net8.0-windows\win-x64\publish\</PublishDir>
   </PropertyGroup>
 
   <!-- Harvest everything that was published (FDD) into the MSI -->

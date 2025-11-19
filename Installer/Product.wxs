@@ -17,26 +17,9 @@
       <Directory Id="INSTALLDIR" Name="BrowserReporterService" />
     </StandardDirectory>
 
-    <!-- Add the built-in all-users startup folder to the directory tree -->
-    <Directory Id="WixCommonStartupFolder" Name="Startup" />
-
-    <!-- Use built-in WixCommonStartupFolder for all-users startup shortcut -->
-    <DirectoryRef Id="WixCommonStartupFolder">
-      <Component Id="StartupShortcut" Guid="b6e2e2e2-1c2a-4b7a-9e2a-7e2e2e2e2e2e">
-        <Shortcut Id="StartupShortcut" 
-                  Name="Browser Reporter Service" 
-                  Description="Browser Reporter Service - Starts automatically for all users"
-                  Target="[INSTALLDIR]BrowserReporterService.exe"
-                  WorkingDirectory="INSTALLDIR" />
-        <RemoveFolder Id="WixCommonStartupFolder" On="uninstall" />
-        <RegistryValue Root="HKCU" Key="Software\BrowserReporterService" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
-      </Component>
-    </DirectoryRef>
-
     <!-- Pull in the harvested binaries and define the main feature -->
     <Feature Id="MainFeature" Title="Browser Reporter Service" Level="1">
       <ComponentGroupRef Id="AppFiles" />
-      <ComponentRef Id="StartupShortcut" />
     </Feature>
 
   </Package>
