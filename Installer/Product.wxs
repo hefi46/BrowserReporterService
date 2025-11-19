@@ -17,9 +17,19 @@
       <Directory Id="INSTALLDIR" Name="BrowserReporterService" />
     </StandardDirectory>
 
+    <!-- Additional helper scripts -->
+    <ComponentGroup Id="HelperScripts" Directory="INSTALLDIR">
+      <Component Id="NoTrayBatchFile" Guid="*">
+        <File Id="BrowserReporterService_notray.bat"
+              Source="BrowserReporterService_notray.bat"
+              KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
     <!-- Pull in the harvested binaries and define the main feature -->
     <Feature Id="MainFeature" Title="Browser Reporter Service" Level="1">
       <ComponentGroupRef Id="AppFiles" />
+      <ComponentGroupRef Id="HelperScripts" />
     </Feature>
 
   </Package>
