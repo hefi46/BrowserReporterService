@@ -31,26 +31,5 @@ namespace BrowserReporterService.Services
             return loggerConfiguration.CreateLogger();
         }
 
-        public static Logger CreateConsoleLogger()
-        {
-            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var logDirectory = Path.Combine(appDataPath, "BrowserReporter");
-            var logFilePath = Path.Combine(logDirectory, "logs.txt");
-
-            return new LoggerConfiguration()
-                .MinimumLevel.Debug()
-                .Enrich.FromLogContext()
-                .WriteTo.File(
-                    logFilePath,
-                    rollingInterval: RollingInterval.Day,
-                    fileSizeLimitBytes: 5 * 1024 * 1024, // 5 MB
-                    rollOnFileSizeLimit: true,
-                    retainedFileCountLimit: 3,
-                    shared: true,
-                    flushToDiskInterval: TimeSpan.FromSeconds(1))
-                .WriteTo.Console(
-                    outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
-                .CreateLogger();
-        }
     }
 } 

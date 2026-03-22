@@ -47,7 +47,7 @@ namespace BrowserReporterService.Services
         public void AddSentItems(IEnumerable<string> keys)
         {
             if (!keys.Any()) return;
-            
+
             using (var transaction = _connection.BeginTransaction())
             {
                 var command = _connection.CreateCommand();
@@ -66,6 +66,23 @@ namespace BrowserReporterService.Services
                 transaction.Commit();
             }
             _logger.Information("Added {Count} new keys to the deduplication cache.", keys.Count());
+        }
+
+        /// <summary>
+        /// Removes cache entries older than the specified number of days to prevent unbounded growth.
+        /// </summary>
+        public int PruneOldEntries(int retentionDays = 7)
+        {
+            var cutoff = DateTime.UtcNow.AddDays(-retentionDays).ToString("o");
+            var command = _connection.CreateCommand();
+            command.CommandText = "DELETE FROM sent_items WHERE sent_at < $cutoff;";
+            command.Parameters.AddWithValue("$cutoff", cutoff);
+            var deleted = command.ExecuteNonQuery();
+            if (deleted > 0)
+            {
+                _logger.Information("Pruned {Count} expired entries from the deduplication cache (older than {Days} days).", deleted, retentionDays);
+            }
+            return deleted;
         }
 
         public void Dispose()

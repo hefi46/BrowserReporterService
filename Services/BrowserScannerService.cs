@@ -173,8 +173,8 @@ namespace BrowserReporterService.Services
         private async Task<List<BrowserVisit>> ExecuteHistoryQueryInternalAsync(string connectionString, string browserType, string profileName, string computerName)
         {
             var visits = new List<BrowserVisit>();
-            // Hardcoded to only fetch the last day of history, per user request.
-            var cutoffTime = DateTime.UtcNow.AddDays(-1);
+            var historyAgeHours = _config.MaxHistoryAgeHours > 0 ? _config.MaxHistoryAgeHours : 24;
+            var cutoffTime = DateTime.UtcNow.AddHours(-historyAgeHours);
             
             // Chrome WebKit timestamp is microseconds since Jan 1, 1601 UTC.
             var webkitCutoffTime = new DateTimeOffset(cutoffTime).ToUniversalTime().Ticks - new DateTimeOffset(1601,1,1,0,0,0, TimeSpan.Zero).Ticks;
