@@ -50,9 +50,6 @@ namespace BrowserReporterService.Services
 
         [JsonProperty("log_roll_count")]
         public int LogRollCount { get; set; } = 3;
-
-        [JsonProperty("exit_password")]
-        public string ExitPassword { get; set; } = "BRAdmin2025";
     }
 
     public class MonitoredHoursConfig

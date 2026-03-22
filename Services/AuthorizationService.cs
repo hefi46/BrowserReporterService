@@ -66,9 +66,9 @@ namespace BrowserReporterService.Services
                 if (!TimeSpan.TryParse(config.MonitoredHours.Start, out var startTime) ||
                     !TimeSpan.TryParse(config.MonitoredHours.End, out var endTime))
                 {
-                    _logger.Warning("Invalid monitoring hours format. Start: {Start}, End: {End}", 
+                    _logger.Error("Invalid monitoring hours format. Start: {Start}, End: {End}. Monitoring disabled until config is corrected.",
                         config.MonitoredHours.Start, config.MonitoredHours.End);
-                    return true; // Default to always active if invalid format
+                    return false; // Fail closed — do not monitor if time window is misconfigured
                 }
 
                 bool isActive;
