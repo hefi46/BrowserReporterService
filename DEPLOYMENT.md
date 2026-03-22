@@ -89,7 +89,7 @@ This separation allows you to:
 
 Create a PowerShell script to launch the application with your desired flags:
 
-**Option A: Basic Launch (with tray icon)**
+**Option A: Basic Launch**
 ```powershell
 # StartBrowserReporter.ps1
 $appPath = "C:\Program Files\BrowserReporterService\BrowserReporterService.exe"
@@ -98,16 +98,7 @@ if (Test-Path $appPath) {
 }
 ```
 
-**Option B: Headless Launch (no tray icon)**
-```powershell
-# StartBrowserReporterHeadless.ps1
-$appPath = "C:\Program Files\BrowserReporterService\BrowserReporterService.exe"
-if (Test-Path $appPath) {
-    Start-Process $appPath -ArgumentList "--no-tray" -WindowStyle Hidden
-}
-```
-
-**Option C: Custom Configuration**
+**Option B: Custom Configuration**
 ```powershell
 # StartBrowserReporterCustom.ps1
 $appPath = "C:\Program Files\BrowserReporterService\BrowserReporterService.exe"
@@ -117,7 +108,7 @@ if (Test-Path $appPath) {
 }
 ```
 
-**Option D: Advanced with Logging**
+**Option C: Advanced with Logging**
 ```powershell
 # StartBrowserReporterAdvanced.ps1
 $appPath = "C:\Program Files\BrowserReporterService\BrowserReporterService.exe"
@@ -125,7 +116,7 @@ $logFile = "$env:TEMP\BrowserReporter_Launch.log"
 
 try {
     if (Test-Path $appPath) {
-        $args = @("--no-tray")
+        $args = @()
 
         # Optional: Add custom config from network share
         $networkConfig = "\\fileserver\configs\BrowserReporter\config.json"
@@ -242,9 +233,8 @@ Use Group Policy Preferences with Item-Level Targeting for more granular control
 
 To prevent users from easily closing the application:
 
-1. Use the `--no-tray` flag (removes tray icon access)
-2. Configure exit password in the config file
-3. Remove Task Manager access via GPO (optional, not recommended for most environments)
+1. The application runs headless with no user-visible UI
+2. Remove Task Manager access via GPO (optional, not recommended for most environments)
 
 ### Monitoring Deployment
 
@@ -345,18 +335,20 @@ Start-Sleep -Seconds 2
 
 Available flags for customizing startup behavior:
 
-- `--no-tray` - Run without system tray icon (recommended for GPO deployment)
 - `--debug` - Enable debug console window (for troubleshooting)
 - `--once` - Run single sync cycle and exit (for testing)
 - `--config <path>` - Use custom config file (local or UNC path)
 - `--server <url>` - Override server URL from config
+- `--encryptconfig` - Encrypt a plaintext config file (requires `--config`)
+- `--install` - Register a Windows scheduled task for auto-start
+- `--uninstall` - Remove the Windows scheduled task
 
 **Example combinations:**
 ```powershell
-# Production deployment - headless with custom config
-BrowserReporterService.exe --no-tray --config "\\server\configs\config.json"
+# Production deployment with custom config
+BrowserReporterService.exe --config "\\server\configs\config.json"
 
-# Debug deployment - visible tray with debug console
+# Debug deployment with console output
 BrowserReporterService.exe --debug
 
 # Testing - single run without staying resident

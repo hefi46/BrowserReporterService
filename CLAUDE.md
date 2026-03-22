@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Browser Reporter Service is a Windows system tray application that collects browsing history from Chrome and Edge browsers and reports it to a central server. It's designed for enterprise deployment with MSI installer and Group Policy-based startup configuration.
+Browser Reporter Service is a headless Windows application that collects browsing history from Chrome and Edge browsers and reports it to a central server. It's designed for enterprise deployment with MSI installer and Group Policy-based startup configuration.
 
 **Technology Stack:**
 - .NET 8 (Windows Forms, self-contained deployment)
@@ -51,14 +51,14 @@ dotnet run -- --encryptconfig --config "path\to\plaintext-config.json"
 
 ### Command-Line Flags
 ```bash
-# Run without system tray icon (recommended for Group Policy deployment)
-dotnet run -- --no-tray
-
-# Combine flags for headless deployment with custom config
-dotnet run -- --no-tray --config "path\to\config.json"
-
 # Test mode - single sync then exit
 dotnet run -- --once --debug
+
+# Use custom config file
+dotnet run -- --config "path\to\config.json"
+
+# Override server URL
+dotnet run -- --server "http://myserver:8000"
 ```
 
 ## Deployment Strategy
@@ -72,7 +72,7 @@ The recommended enterprise deployment approach uses **Group Policy** with two co
 
 2. **Logon Script** (User Configuration GPO)
    - Launches the application at user login
-   - Allows custom command-line flags (e.g., `--no-tray`)
+   - Allows custom command-line flags
    - Enables different configurations per user group
    - PowerShell script deployed via SYSVOL
 
@@ -80,7 +80,7 @@ The recommended enterprise deployment approach uses **Group Policy** with two co
 - Centralized control of installation and startup
 - Easy to update startup parameters without reinstalling
 - Per-group customization (different flags for different departments)
-- No persistent system tray icon with `--no-tray` flag
+- Headless operation with no user-visible UI
 - Clean separation of installation and execution policies
 
 **See `DEPLOYMENT.md` for complete step-by-step instructions.**
@@ -94,14 +94,12 @@ The recommended enterprise deployment approach uses **Group Policy** with two co
 2. Command-line argument parsing via `CommandLineArgs`
 3. Console allocation for debug mode
 4. Logging setup through `LoggingService`
-5. Routing to either utility commands or main tray application
+5. Routing to either utility commands or headless application
 
-**TrayApplicationContext**: Core application context that:
-- Manages system tray icon with 4 states (green/yellow/red/grey)
+**HeadlessApplicationContext**: Core application context that:
 - Downloads and decrypts encrypted configuration from server
 - Schedules periodic sync cycles with jitter (+/- 30% randomization)
-- Orchestrates the sync pipeline: authorization → browser scan → cache filtering → API send → icon update
-- Provides password-protected exit functionality
+- Orchestrates the sync pipeline: authorization → browser scan → cache filtering → API send → log status
 
 ### Service Architecture
 
@@ -123,7 +121,7 @@ All services live in the `Services/` directory:
 - Supports multiple profiles (Default, Profile 1, Profile 2, etc.)
 - Converts WebKit timestamps (microseconds since 1601-01-01) to Unix milliseconds
 - Uses immutable read-only mode first, falls back to temp copy if database is locked
-- Only scans history from last 24 hours (hardcoded cutoff)
+- Scans history based on `max_history_age_hours` config (default: 24 hours)
 
 **CacheService**: SQLite-based deduplication
 - Stores sent items by composite key: `{Url}:{VisitTime}`
@@ -138,7 +136,7 @@ All services live in the `Services/` directory:
 
 **ApiClient**: HTTP communication with server
 - Sends batches of 500 visits per request
-- POST to `{server_url}/api/reports`
+- POST to `{server_url}/api/reports/data`
 - Includes user info (username, domain, groups, department, etc.) with each batch
 - Stops on first failed batch to preserve data integrity
 
@@ -172,15 +170,8 @@ All services live in the `Services/` directory:
 4. **Cache filtering**: Load sent items from SQLite, filter out duplicates
 5. **Batch sending**: Send 500 items at a time to API
 6. **Cache update**: Mark successfully sent items in SQLite
-7. **Icon update**: Set tray icon color based on outcome (green/yellow/red)
+7. **Log status**: Log outcome of sync cycle
 8. **Reschedule**: Calculate next sync time with new jitter
-
-### Icon States
-
-- **Green**: Connected and reporting successfully
-- **Yellow**: Connected but user not authorized or outside monitoring hours
-- **Red**: Error occurred (config failed, API error, sync failed)
-- **Grey**: Currently syncing or initializing
 
 ## Important Implementation Details
 
@@ -192,7 +183,6 @@ The `BrowserScannerService` handles locked databases through a two-step approach
 
 ### Security Considerations
 - AES encryption key is hardcoded in `CryptoService.cs` (line 9)
-- Exit password defaults to `BRAdmin2025` but can be configured
 - Bootstrap config contains server URL and may be deployed to `%ProgramData%\BrowserReporter\`
 - Local plaintext configs (via `--config`) bypass all encryption
 
@@ -222,15 +212,9 @@ BrowserReporterService.exe --once
 # Use local config file (bypasses server download)
 BrowserReporterService.exe --config "C:\path\to\config.json"
 
-# Run without tray icon (headless mode for GPO deployment)
-BrowserReporterService.exe --no-tray
-
 # Combine flags
-BrowserReporterService.exe --no-tray --config "\\server\share\config.json"
+BrowserReporterService.exe --debug --config "\\server\share\config.json"
 ```
-
-### Show Debug Console at Runtime
-Right-click tray icon → "Show Debug Console" to allocate console window for live logging.
 
 ### Log Files
 Logs are in `%LOCALAPPDATA%\BrowserReporter\logs.txt` with automatic rotation based on configured limits.
@@ -240,14 +224,13 @@ Logs are in `%LOCALAPPDATA%\BrowserReporter\logs.txt` with automatic rotation ba
 Required fields in AppConfig:
 - `server_url`: Server endpoint for config download and report submission
 - `sync_interval_minutes`: How often to sync (default: 5)
-- `max_history_age_hours`: History cutoff (currently hardcoded to 24 hours in code)
+- `max_history_age_hours`: History cutoff (default: 24 hours)
 - `monitored_users_group`: AD group name for authorization
 - `monitored_users`: List of specific usernames to monitor
 - `monitored_hours`: Time window object with `start` and `end` (HH:mm format)
 - `browsers`: Array of browsers to monitor (e.g., ["chrome", "edge"])
 - `log_max_mb`: Max log file size before rotation (default: 5)
 - `log_roll_count`: Number of old log files to keep (default: 3)
-- `exit_password`: Password required to exit the application (default: "BRAdmin2025")
 
 ## Common Development Tasks
 

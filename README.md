@@ -1,10 +1,10 @@
 # Browser Reporter Service
 
-A Windows system tray application that silently collects browsing history from Chrome and Edge browsers and reports it to a central server based on dynamic configuration. Designed for enterprise deployment via Group Policy.
+A headless Windows application that silently collects browsing history from Chrome and Edge browsers and reports it to a central server based on dynamic configuration. Designed for enterprise deployment via Group Policy.
 
 ## Features
 
-- **Silent Operation**: Runs in system tray or headless mode with `--no-tray`
+- **Silent Operation**: Runs headless with no user-visible UI
 - **Dynamic Configuration**: Downloads encrypted configuration from server
 - **Browser Support**: Chrome and Edge history collection
 - **Enterprise Ready**: MSI installer + Group Policy deployment
@@ -45,7 +45,7 @@ The MSI installer will be created at `Installer/bin/Release/BrowserReporterServi
 - **Application**: Self-contained folder with all dependencies
 - **Installer**: MSI package for enterprise deployment
 - **Install Location**: `C:\Program Files\BrowserReporterService\`
-- **Helper Scripts**: Includes `BrowserReporterService_notray.bat` for GPO deployment
+- **Install Location**: `C:\Program Files\BrowserReporterService\`
 
 ## Deployment
 
@@ -65,8 +65,7 @@ The recommended enterprise deployment uses **Group Policy** with two components:
 
 2. **Logon Script** (User Configuration GPO)
    - Launch the application at user login using a PowerShell or batch script
-   - Example script path: `C:\Program Files\BrowserReporterService\BrowserReporterService_notray.bat`
-   - Allows custom command-line flags (e.g., `--no-tray` for headless mode)
+   - Allows custom command-line flags
    - Enables different configurations per user group
 
 **See `DEPLOYMENT.md` for complete step-by-step Group Policy configuration instructions.**
@@ -74,13 +73,8 @@ The recommended enterprise deployment uses **Group Policy** with two components:
 ### Quick Start Example
 
 ```powershell
-# PowerShell logon script for headless deployment
-Start-Process "C:\Program Files\BrowserReporterService\BrowserReporterService.exe" -ArgumentList "--no-tray" -WindowStyle Hidden
-```
-
-Or use the included batch file:
-```cmd
-"C:\Program Files\BrowserReporterService\BrowserReporterService_notray.bat"
+# PowerShell logon script for deployment
+Start-Process "C:\Program Files\BrowserReporterService\BrowserReporterService.exe" -WindowStyle Hidden
 ```
 
 ## Configuration
@@ -100,8 +94,7 @@ The application downloads an AES-encrypted configuration file from the server. C
   },
   "browsers": ["chrome", "edge"],
   "log_max_mb": 5,
-  "log_roll_count": 3,
-  "exit_password": "BRAdmin2025"
+  "log_roll_count": 3
 }
 ```
 
@@ -119,18 +112,17 @@ This outputs an encrypted envelope that can be deployed to the server.
 
 | Option | Description |
 |--------|-------------|
-| `--no-tray` | Run without system tray icon (recommended for GPO deployment) |
 | `--debug` | Enable console output for debugging |
 | `--once` | Perform single sync cycle and exit |
 | `--config <path>` | Use local plaintext config file |
-| `--encryptconfig` | Encrypt a plaintext config file |
+| `--server <url>` | Override server URL from config |
+| `--encryptconfig` | Encrypt a plaintext config file (requires `--config`) |
+| `--install` | Register a Windows scheduled task for auto-start |
+| `--uninstall` | Remove the Windows scheduled task |
 
 ### Examples
 
 ```bash
-# Headless mode without tray icon (for GPO deployment)
-BrowserReporterService.exe --no-tray
-
 # Debug mode with console output
 BrowserReporterService.exe --debug
 
@@ -140,27 +132,12 @@ BrowserReporterService.exe --once
 # Use local config file
 BrowserReporterService.exe --config "C:\temp\config.json"
 
-# Combine flags for headless deployment with custom config
-BrowserReporterService.exe --no-tray --config "\\server\share\config.json"
+# Headless deployment with custom config
+BrowserReporterService.exe --config "\\server\share\config.json"
 
 # Encrypt configuration
 BrowserReporterService.exe --encryptconfig --config "plaintext.json"
 ```
-
-## System Tray Interface
-
-The application runs in the system tray with status indicators (unless running with `--no-tray` flag):
-
-- **Green Icon**: Connected and reporting successfully
-- **Yellow Icon**: Connected but user not authorized
-- **Red Icon**: Error (config, API, or sync failure)
-- **Grey Icon**: Syncing in progress
-
-### Context Menu Options
-
-- **Force Data Sync Now**: Manually trigger a sync cycle
-- **View Logs**: Open log file in default text editor
-- **Exit**: Close the application
 
 ## Logging
 
@@ -209,8 +186,7 @@ Logs contain detailed information about:
 - Chrome and Edge browser support
 - Enterprise MSI deployment
 - Group Policy deployment support
-- `--no-tray` headless mode for GPO logon scripts
-- Included helper script: `BrowserReporterService_notray.bat`
+- Headless operation (no tray icon)
 - LDAP integration with AD groups
 - AES configuration encryption
 - SQLite deduplication cache
